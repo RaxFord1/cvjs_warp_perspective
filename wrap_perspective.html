@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Image by Points</title>
+    <style>
+        #canvas, #resultCanvas {
+            border: 1px solid black;
+            margin: 10px;
+        }
+        .slider-container {
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>Crop Image by Points</h1>
+<div>
+    <input type="file" id="fileInput" accept="image/*">
+    <canvas id="canvas"></canvas>
+    <canvas id="resultCanvas"></canvas>
+</div>
+
+<div class="slider-container">
+    <h3>Adjust Points</h3>
+    <label for="leftTopX">Left Top X:</label>
+    <input type="range" id="leftTopX" min="0" max="500" value="0">
+    <span id="leftTopXVal">0</span><br>
+
+    <label for="leftTopY">Left Top Y:</label>
+    <input type="range" id="leftTopY" min="0" max="500" value="0">
+    <span id="leftTopYVal">0</span><br>
+
+    <label for="topRightX">Top Right X:</label>
+    <input type="range" id="topRightX" min="0" max="500" value="0">
+    <span id="topRightXVal">0</span><br>
+
+    <label for="topRightY">Top Right Y:</label>
+    <input type="range" id="topRightY" min="0" max="500" value="0">
+    <span id="topRightYVal">0</span><br>
+
+    <label for="bottomLeftX">Bottom Left X:</label>
+    <input type="range" id="bottomLeftX" min="0" max="500" value="0">
+    <span id="bottomLeftXVal">0</span><br>
+
+    <label for="bottomLeftY">Bottom Left Y:</label>
+    <input type="range" id="bottomLeftY" min="0" max="500" value="0">
+    <span id="bottomLeftYVal">0</span><br>
+
+    <label for="bottomRightX">Bottom Right X:</label>
+    <input type="range" id="bottomRightX" min="0" max="500" value="0">
+    <span id="bottomRightXVal">0</span><br>
+
+    <label for="bottomRightY">Bottom Right Y:</label>
+    <input type="range" id="bottomRightY" min="0" max="500" value="0">
+    <span id="bottomRightYVal">0</span><br>
+
+    <button id="cropButton">Crop Image</button>
+</div>
+
+<script>
+    // Define the OpenCV.js Module
+    var Module = {
+        onRuntimeInitialized: function () {
+            console.log('OpenCV.js is ready!');
+            initializeApp(Module); // Pass the cv module
+        }
+    };
+
+    function initializeApp(cv) {
+        let canvas = document.getElementById('canvas');
+        let resultCanvas = document.getElementById('resultCanvas');
+        let ctx = canvas.getContext('2d');
+        let img = new Image();
+
+        // Set a default image
+        img.crossOrigin = "anonymous";
+        img.src = 'https://cdn.pixabay.com/photo/2016/07/07/16/46/dice-1502706_640.jpg';
+
+        const fileInput = document.getElementById('fileInput');
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            drawPoints();
+        };
+
+        const sliders = document.querySelectorAll('input[type="range"]');
+        sliders.forEach(slider => {
+            slider.addEventListener('input', () => {
+                updateSliders();
+                drawPoints();
+            });
+        });
+
+        function updateSliders() {
+            document.getElementById('leftTopXVal').innerText = document.getElementById('leftTopX').value;
+            document.getElementById('leftTopYVal').innerText = document.getElementById('leftTopY').value;
+            document.getElementById('topRightXVal').innerText = document.getElementById('topRightX').value;
+            document.getElementById('topRightYVal').innerText = document.getElementById('topRightY').value;
+            document.getElementById('bottomLeftXVal').innerText = document.getElementById('bottomLeftX').value;
+            document.getElementById('bottomLeftYVal').innerText = document.getElementById('bottomLeftY').value;
+            document.getElementById('bottomRightXVal').innerText = document.getElementById('bottomRightX').value;
+            document.getElementById('bottomRightYVal').innerText = document.getElementById('bottomRightY').value;
+        }
+
+        function drawPoints() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0);
+
+            const points = [
+                { x: parseInt(document.getElementById('leftTopX').value), y: parseInt(document.getElementById('leftTopY').value) },
+                { x: parseInt(document.getElementById('topRightX').value), y: parseInt(document.getElementById('topRightY').value) },
+                { x: parseInt(document.getElementById('bottomRightX').value), y: parseInt(document.getElementById('bottomRightY').value) },
+                { x: parseInt(document.getElementById('bottomLeftX').value), y: parseInt(document.getElementById('bottomLeftY').value) }
+            ];
+
+            ctx.fillStyle = 'red';
+            points.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            ctx.strokeStyle = 'blue';
+            ctx.beginPath();
+            ctx.moveTo(points[0].x, points[0].y);
+            points.forEach((point, index) => {
+                if (index > 0) {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        document.getElementById('cropButton').addEventListener('click', () => {
+            const leftTop = [
+                parseInt(document.getElementById('leftTopX').value),
+                parseInt(document.getElementById('leftTopY').value)
+            ];
+            const topRight = [
+                parseInt(document.getElementById('topRightX').value),
+                parseInt(document.getElementById('topRightY').value)
+            ];
+            const bottomLeft = [
+                parseInt(document.getElementById('bottomLeftX').value),
+                parseInt(document.getElementById('bottomLeftY').value)
+            ];
+            const bottomRight = [
+                parseInt(document.getElementById('bottomRightX').value),
+                parseInt(document.getElementById('bottomRightY').value)
+            ];
+
+            console.log("Cropping Points:", { leftTop, topRight, bottomLeft, bottomRight });
+
+            const src = cv.imread(canvas);
+
+            if (!src || src.empty()) {
+                console.error("Failed to read the source image.");
+                return;
+            }
+
+            const cropped = cropImageByPoints(cv, src, leftTop, topRight, bottomLeft, bottomRight);
+
+            if (!cropped || cropped.empty()) {
+                console.error("Cropped result is invalid.");
+                src.delete();
+                return;
+            }
+
+            resultCanvas.width = cropped.cols;
+            resultCanvas.height = cropped.rows;
+            cv.imshow('resultCanvas', cropped);
+
+            src.delete();
+            cropped.delete();
+        });
+
+        function cropImageByPoints(cv, image, leftTop, topRight, bottomLeft, bottomRight) {
+            let ptsSrc = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                leftTop[0], leftTop[1],
+                topRight[0], topRight[1],
+                bottomRight[0], bottomRight[1],
+                bottomLeft[0], bottomLeft[1]
+            ]);
+
+            let width = Math.max(
+                Math.hypot(topRight[0] - leftTop[0], topRight[1] - leftTop[1]),
+                Math.hypot(bottomRight[0] - bottomLeft[0], bottomRight[1] - bottomLeft[1])
+            );
+
+            let height = Math.max(
+                Math.hypot(bottomLeft[0] - leftTop[0], bottomLeft[1] - leftTop[1]),
+                Math.hypot(bottomRight[0] - topRight[0], bottomRight[1] - topRight[1])
+            );
+
+            let ptsDst = cv.matFromArray(4, 1, cv.CV_32FC2, [
+                0, 0,
+                width - 1, 0,
+                width - 1, height - 1,
+                0, height - 1
+            ]);
+
+            let matrix = cv.getPerspectiveTransform(ptsSrc, ptsDst);
+            let dst = new cv.Mat();
+            let size = new cv.Size(width, height);
+            cv.warpPerspective(image, dst, matrix, size, cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+            ptsSrc.delete();
+            ptsDst.delete();
+            matrix.delete();
+
+            return dst;
+        }
+    }
+</script>
+
+<script async src="https://docs.opencv.org/4.x/opencv.js"></script>
+</body>
+</html>
